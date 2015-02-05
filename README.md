@@ -3,6 +3,70 @@ Shipmate
 
 Utility command for executing multiple docker builds in a repository.
 
+Installation
+------------
+
+Assuming you have a proper golang environment setup:
+
+```
+go get github.com/oxtopus/shipmate
+go install github.com/oxtopus/shipmate
+```
+
+Usage
+-----
+
+```
+$ shipmate -h
+Usage of shipmate:
+  -name="": Local destination of bare repository
+  -remote="": Remote repository URL
+  -rev="master": Git revision
+```
+
+`shipmate` assumes that it is run in the context of a directory that contains
+one or more Dockerfiles (recursively) that permute multiple linux
+environments. For example, consider a directory tree that looks like this:
+
+```
+.
+├── centos
+│   ├── 6
+│   │   └── gcc
+│   │       └── Dockerfile
+│   └── 7
+│       └── gcc
+│           └── Dockerfile
+├── debian
+│   └── jessie
+│       └── clang
+│           └── Dockerfile
+└── ubuntu
+    └── 14.04
+        ├── clang
+        │   └── Dockerfile
+        └── gcc
+            └── Dockerfile
+```
+
+Followed by this command:
+
+```
+shipmate -name=$NAME -remote=$REMOTE -rev=$REV
+```
+
+The `shipmate` process will clone the remote repository defined by `$REMOTE`,
+reset to the revision `$REV`, and then recursively search the current working
+directory for Dockerfiles, excluding what you just cloned.  `shipmate` will
+make a shallow clone relative to the directories that it finds and execute a
+`docker build` command.  The docker repository will be assumed to be `$NAME`,
+and the tag constructed according to the `$REV` value and the path to the
+Dockerfile being built.  The final result will be docker images in the `$NAME`
+repository for each of the Dockerfiles that were found, with unique tags of
+the format `$REV-SUFFIX`, where `SUFFIX` is a translation of the path to use
+dashes instead of slashes, e.g. `debian-jessie-clang` or `ubuntu-14.04-gcc`
+citing the example above.
+
 License
 -------
 
