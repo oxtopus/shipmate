@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -52,34 +51,25 @@ func syncWithRemote(remote string, dest string) {
 }
 
 /*
-Create archive from local bare repository at specific location
+Create shallow clone at specified location
 */
-func createArchiveAtLocation(rev string, repo string, target string) {
+func cloneShallowAtLocation(cwd string, rev string, repo string, target string) {
 	root := filepath.Join(target, path.Base(repo))
 
 	// Clear out remnants of previous build
 	os.RemoveAll(root)
 	os.MkdirAll(root, 0700)
 
-	/*
-		git archive --remote=REMOTE --format=tar COMMIT | tar -x -C TARGET/NAME
-	*/
-	archiveCmd := exec.Command("git", "archive", "--remote="+repo, "--format=tar", rev)
-	extractCmd := exec.Command("tar", "-x", "-C", root)
+	cmd := exec.Command("git", "clone", "--depth=1", "file://"+cwd+"/"+repo, root)
+	var out bytes.Buffer
+	cmd.Stderr = &out
+	err := cmd.Run()
+	fmt.Println(out.String())
+	if err != nil {
+		fmt.Println("Failed to clone!")
+		log.Fatal(err)
+	}
 
-	r, w := io.Pipe()
-	archiveCmd.Stdout = w
-	extractCmd.Stdin = r
-
-	var b2 bytes.Buffer
-	extractCmd.Stdout = &b2
-
-	archiveCmd.Start()
-	extractCmd.Start()
-	archiveCmd.Wait()
-	w.Close()
-	extractCmd.Wait()
-	io.Copy(os.Stdout, &b2)
 }
 
 /*
@@ -132,10 +122,10 @@ func main() {
 	syncWithRemote(*remote, *name)
 
 	walkFn := func(pth string, info os.FileInfo, err error) error {
-		if strings.HasSuffix(pth, "/Dockerfile") && !strings.Contains(pth, "/"+*rev+"/") {
+		if strings.HasSuffix(pth, "/Dockerfile") && !strings.Contains(pth, "/"+*name+"/") {
 			target := path.Dir(pth)
 			suffix := strings.Replace(strings.TrimPrefix(target, cwd), "/", "-", -1)
-			createArchiveAtLocation(*rev, *name, target)
+			cloneShallowAtLocation(cwd, *rev, *name, target)
 			executeBuild(*rev, *name, target, suffix)
 		}
 		return nil
