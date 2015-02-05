@@ -117,7 +117,7 @@ func main() {
 
 	flag.Parse()
 
-	if len(*name) == 0 {
+	if len(*name) == 0 || len(*remote) == 0 {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
 		flag.PrintDefaults()
 		return
