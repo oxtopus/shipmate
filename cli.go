@@ -105,6 +105,7 @@ func main() {
 	remote := flag.String("remote", "", "Remote repository URL")
 	name := flag.String("name", "", "Local destination of bare repository")
 	rev := flag.String("rev", "master", "Git revision")
+	userDefinedPrefix := flag.String("prefix", "", "Limit builds to paths with this prefix.  If not specified, process all.")
 
 	flag.Parse()
 
@@ -129,6 +130,11 @@ func main() {
 	walkFn := func(pth string, info os.FileInfo, err error) error {
 		if strings.HasSuffix(pth, "/Dockerfile") && !strings.Contains(pth, "/"+*name+"/") {
 			target := path.Dir(pth)
+
+			if len(*userDefinedPrefix) > 0 && !strings.HasPrefix(strings.TrimPrefix(strings.TrimPrefix(target, cwd), "/"), *userDefinedPrefix) {
+				return nil
+			}
+
 			suffix := strings.Replace(strings.TrimPrefix(target, cwd), "/", "-", -1)
 			cloneShallowAtLocation(cwd, *rev, *name, target)
 			executeBuild(*rev, *name, target, suffix)
