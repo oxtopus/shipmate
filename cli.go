@@ -14,8 +14,8 @@ import (
 
 /*
 Git clone a repository as bare.  Local cache will not ever be used directly.
-Instead, an archive will be installed into each build directory later via
-`git archive`
+Instead, a shallow clone will be installed into each build directory later via
+`git clone --depth=1`.
 */
 func cloneBareRepository(remote string, dest string) error {
 	cmd := exec.Command("git", "clone", "--bare", remote, dest)
@@ -131,12 +131,15 @@ func main() {
 		if strings.HasSuffix(pth, "/Dockerfile") && !strings.Contains(pth, "/"+*name+"/") {
 			target := path.Dir(pth)
 
+			/*
+				If user specified a prefix, skip paths without it
+			*/
 			if len(*userDefinedPrefix) > 0 && !strings.HasPrefix(strings.TrimPrefix(strings.TrimPrefix(target, cwd), "/"), *userDefinedPrefix) {
 				return nil
 			}
 
-			suffix := strings.Replace(strings.TrimPrefix(target, cwd), "/", "-", -1)
 			cloneShallowAtLocation(cwd, *rev, *name, target)
+			suffix := strings.Replace(strings.TrimPrefix(target, cwd), "/", "-", -1)
 			executeBuild(*rev, *name, target, suffix)
 		}
 		return nil
