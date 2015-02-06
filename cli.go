@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -108,7 +109,7 @@ func main() {
 	flag.Parse()
 
 	if len(*name) == 0 || len(*remote) == 0 {
-		log.Printf("Usage of %s:\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
 		flag.PrintDefaults()
 		os.Exit(1)
 	}

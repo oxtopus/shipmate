@@ -10,7 +10,6 @@ Assuming you have a proper golang environment setup:
 
 ```
 go get github.com/oxtopus/shipmate
-go install github.com/oxtopus/shipmate
 ```
 
 Usage
