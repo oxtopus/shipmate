@@ -19,6 +19,7 @@ Usage
 $ shipmate -h
 Usage of shipmate:
   -name="": Local destination of bare repository
+  -prefix="": Limit builds to paths with this prefix.  If not specified, process all.
   -remote="": Remote repository URL
   -rev="master": Git revision
 ```
@@ -65,6 +66,8 @@ repository for each of the Dockerfiles that were found, with unique tags of
 the format `$REV-SUFFIX`, where `SUFFIX` is a translation of the path to use
 dashes instead of slashes, e.g. `debian-jessie-clang` or `ubuntu-14.04-gcc`
 citing the example above.
+
+If you don't want to build everything, use the `-prefix` command-line option.
 
 License
 -------
