@@ -1,9 +1,7 @@
-package main
+package shipmate
 
 import (
 	"bufio"
-	"flag"
-	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -40,7 +38,7 @@ func syncWithRemote(remote string, dest string) error {
 		return err
 	}
 
-	cmd := exec.Command("git", "fetch", remote)
+	cmd := exec.Command("echo", "git", "fetch", remote)
 
 	err := cmd.Run()
 
@@ -61,7 +59,7 @@ func cloneShallowAtLocation(cwd string, rev string, repo string, target string) 
 	os.RemoveAll(root)
 	os.MkdirAll(root, 0700)
 
-	cmd := exec.Command("git", "clone", "--depth=1", "file://"+cwd+"/"+repo, root)
+	cmd := exec.Command("echo", "git", "clone", "--depth=1", "file://"+cwd+"/"+repo, root)
 
 	err := cmd.Run()
 
@@ -76,7 +74,7 @@ func cloneShallowAtLocation(cwd string, rev string, repo string, target string) 
 Execute docker build
 */
 func executeBuild(rev string, repo string, target string, suffix string) error {
-	cmd := exec.Command("docker", "build", "-t", repo+":"+rev+suffix, target)
+	cmd := exec.Command("echo", "docker", "build", "-t", repo+":"+rev+suffix, target)
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -101,49 +99,31 @@ func executeBuild(rev string, repo string, target string, suffix string) error {
 	return nil
 }
 
-func main() {
-	remote := flag.String("remote", "", "Remote repository URL")
-	name := flag.String("name", "", "Local destination of bare repository")
-	rev := flag.String("rev", "master", "Git revision")
-	userDefinedPrefix := flag.String("prefix", "", "Limit builds to paths with this prefix.  If not specified, process all.")
-
-	flag.Parse()
-
-	if len(*name) == 0 || len(*remote) == 0 {
-		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
-		flag.PrintDefaults()
-		os.Exit(1)
-	}
-
-	cwd, err := os.Getwd()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if err := syncWithRemote(*remote, *name); err != nil {
+func run(remote string, name string, rev string, userDefinedPrefix string, wd string) {
+	if err := syncWithRemote(remote, name); err != nil {
 		log.Fatal(err)
 	}
 
 	/*
-		Walk current working directory and build containers where Dockerfiles exist
+	   Walk current working directory and build containers where Dockerfiles exist
 	*/
 	walkFn := func(pth string, info os.FileInfo, err error) error {
-		if strings.HasSuffix(pth, "/Dockerfile") && !strings.Contains(pth, "/"+*name+"/") {
+		if strings.HasSuffix(pth, "/Dockerfile") && !strings.Contains(pth, "/"+name+"/") {
 			target := path.Dir(pth)
 
 			/*
-				If user specified a prefix, skip paths without it
+			   If user specified a prefix, skip paths without it
 			*/
-			if len(*userDefinedPrefix) > 0 && !strings.HasPrefix(strings.TrimPrefix(strings.TrimPrefix(target, cwd), "/"), *userDefinedPrefix) {
+			if len(userDefinedPrefix) > 0 && !strings.HasPrefix(strings.TrimPrefix(strings.TrimPrefix(target, wd), "/"), userDefinedPrefix) {
 				return nil
 			}
 
-			cloneShallowAtLocation(cwd, *rev, *name, target)
-			suffix := strings.Replace(strings.TrimPrefix(target, cwd), "/", "-", -1)
-			executeBuild(*rev, *name, target, suffix)
+			cloneShallowAtLocation(wd, rev, name, target)
+			suffix := strings.Replace(strings.TrimPrefix(target, wd), "/", "-", -1)
+			executeBuild(rev, name, target, suffix)
 		}
 		return nil
 	}
 
-	filepath.Walk(cwd, walkFn)
+	filepath.Walk(wd, walkFn)
 }
